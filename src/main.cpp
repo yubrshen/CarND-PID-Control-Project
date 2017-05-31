@@ -4,6 +4,7 @@
 #include "PID.h"
 #include "Twiddler.h"
 #include <math.h>
+#include <algorithm> // std::min
 
 // for convenience
 using json = nlohmann::json;
@@ -39,7 +40,10 @@ int main()
 
   PID pid;
   //Twiddler twiddler(0.2, 3.0, 0.004); also OK, not as 0.1, 3.0, 0.004
-  Twiddler twiddler(0.1, 3.0, 0.004); // good parameters, so far the best
+  Twiddler twiddler(0.1, 3.0, 0.004); // good parameters, so far the best of manual picking.
+  // Here is the best found by Twiddler: 0.19905 3.69262 0.004 starting from (0.1, 3.0, 0.004)
+  // another good set 0.105 3.5 0.004 at faster speed.
+  // another good one 0.19905 3.76306 0.004
   //Twiddler twiddler(0.1, 0.25, 0.03); // good parameters
   double current_time = 0.0;
   double previous_time = clock();
@@ -75,26 +79,34 @@ int main()
           double dt = (current_time - previous_time)/CLOCKS_PER_SEC; // elapsed time in seconds
           previous_time = current_time;
 
-          // send out the steer signal
-          // dt = 1.0;
           pid.UpdateError(cte, dt);
           steer_value = trimWithin(-pid.TotalError(), -1, 1);
           json msgJson;
           msgJson["steering_angle"] = steer_value;
+          double throttle = 10.0;
+          double throttle_steer = 5/(abs(steer_value)*(7 - speed));
+
+          if (abs(steer_value*(7 - speed)) < 0.0001)
+            throttle = std::min(throttle, throttle_steer); // slow down with steep steering, and too fast speed
+          // std::cout << "throttle: " << throttle << " throttle_steer: " << throttle_steer << " steer_value: " << steer_value << " speed: " << speed << std::endl;
           msgJson["throttle"] = 0.4; // was 0.3
+
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           // DEBUG
-          std::cout << "CTE: " << cte << " angle: " << angle << " Steering Value: " << steer_value << std::endl;
+          //std::cout << "CTE: " << cte << " angle: " << angle << " Steering Value: " << steer_value << std::endl;
           // std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-          // bool adjustment_needed = twiddler.process(cte);
-          // if (adjustment_needed) {
-          //   pid.Init(twiddler.params[0], twiddler.params[1], twiddler.params[2]);
-          //   // send out the reset msg
-          //   std::string msg = "42[\"reset\",{}]";
-          //   std::cout << msg << std::endl;
-          //   ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-          // }
+          bool adjustment_needed = twiddler.process(cte);
+          if (adjustment_needed) {
+            pid.Init(twiddler.params[0], twiddler.params[1], twiddler.params[2]);
+            std::cout << "cte: " << cte << std::endl;
+            if (2 < abs(cte)) {      // reset at the excessive cte
+              // send out the reset msg
+              std::string msg = "42[\"reset\",{}]";
+              std::cout << msg << std::endl;
+              ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+            }
+          }
         }
       } else {
         // Manual driving
