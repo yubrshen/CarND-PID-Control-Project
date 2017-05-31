@@ -4,10 +4,10 @@ cmake_minimum_required (VERSION 3.5)
 
 add_definitions(-std=c++11)
 
-set(CXX_FLAGS "-Wall")
+set(CXX_FLAGS "-Wallg")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
-set(sources src/PID.cpp src/main.cpp)
+set(sources src/PID.cpp src/Twiddler.cpp src/main.cpp)
 
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
