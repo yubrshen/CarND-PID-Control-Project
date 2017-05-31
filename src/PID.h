@@ -35,15 +35,12 @@ public:
   /*
   * Update the PID error variables given cross track error.
   */
-  void UpdateError(double cte);
+  void UpdateError(double cte, double dt); /* add dt to be more continuous */
 
   /*
   * Calculate the total PID error.
   */
   double TotalError();
- private:
-  double previous_cte;
-  double total_cte;
 };
 
 #endif /* PID_H */

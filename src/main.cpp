@@ -38,21 +38,16 @@ int main()
   uWS::Hub h;
 
   PID pid;
-  Twiddler twiddler(0.2, 3.0, 0.004);
+  //Twiddler twiddler(0.2, 3.0, 0.004); also OK, not as 0.1, 3.0, 0.004
+  Twiddler twiddler(0.1, 3.0, 0.004); // good parameters, so far the best
+  //Twiddler twiddler(0.1, 0.25, 0.03); // good parameters
+  double current_time = 0.0;
+  double previous_time = clock();
+
   // TODO: Initialize the pid variable.
   pid.Init(twiddler.params[0], twiddler.params[1], twiddler.params[2]);
 
-  // int count_interaction = 0;
-  // const int training_times = 2*100;
-  // bool training = true;
-  // double best_error = 0;
-  // double error = 0;
-  // std::vector<double> delta_P = {0.1, 0.1, 0.1};
-  // double tol = 0.02;
-  // int next_para = 0;
-  // int adjust_direction = 1;
-
-  h.onMessage([&pid, &twiddler]
+  h.onMessage([&pid, &twiddler, &current_time, &previous_time]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -68,7 +63,7 @@ int main()
           double cte = std::stod(j[1]["cte"].get<std::string>());
           double speed = std::stod(j[1]["speed"].get<std::string>());
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
-          double steer_value;;
+          double steer_value = 0;
 
           /*
           * TODO: Calcuate steering value here, remember the steering value is
@@ -76,25 +71,30 @@ int main()
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
           */
-          bool adjustment_needed = twiddler.process(cte);
-          if (adjustment_needed) {
-            pid.Init(twiddler.params[0], twiddler.params[1], twiddler.params[2]);
-            // send out the reset msg
-            std::string msg = "42[\"reset\",{}]";
-            std::cout << msg << std::endl;
-            ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-          } else {              // send out the steer signal
-            // DEBUG
-            std::cout << "CTE: " << cte << " angle: " << angle << " Steering Value: " << steer_value << std::endl;
-            pid.UpdateError(cte);
-            steer_value = trimWithin(pid.TotalError(), -1, 1);
-            json msgJson;
-            msgJson["steering_angle"] = steer_value;
-            msgJson["throttle"] = 0.3;
-            auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-            std::cout << msg << std::endl;
-            ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-          }
+          current_time = clock();
+          double dt = (current_time - previous_time)/CLOCKS_PER_SEC; // elapsed time in seconds
+          previous_time = current_time;
+
+          // send out the steer signal
+          // dt = 1.0;
+          pid.UpdateError(cte, dt);
+          steer_value = trimWithin(-pid.TotalError(), -1, 1);
+          json msgJson;
+          msgJson["steering_angle"] = steer_value;
+          msgJson["throttle"] = 0.4; // was 0.3
+          auto msg = "42[\"steer\"," + msgJson.dump() + "]";
+          // DEBUG
+          std::cout << "CTE: " << cte << " angle: " << angle << " Steering Value: " << steer_value << std::endl;
+          // std::cout << msg << std::endl;
+          ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+          // bool adjustment_needed = twiddler.process(cte);
+          // if (adjustment_needed) {
+          //   pid.Init(twiddler.params[0], twiddler.params[1], twiddler.params[2]);
+          //   // send out the reset msg
+          //   std::string msg = "42[\"reset\",{}]";
+          //   std::cout << msg << std::endl;
+          //   ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+          // }
         }
       } else {
         // Manual driving
