@@ -8,17 +8,17 @@ class Twiddler {
   int counter_event = 0;
   bool settled = false;
   double error = 0;
-  double best_error = -1;
+  double best_error = -1.0;
 
   std::vector<double> params; // = [p, d, i];
   std::vector<double> best_params; // = deepcopy(self.params);
   std::vector<double> delta_params; // = [0.1, 0.1, 0.1];
 
-  double adjustment_allowance = 0.02;
+  double adjustment_allowance = 0.007;
   int next_param = -1;
   int previous_adjustment = 1;
-  int STABILIZATION = 30;       /* increas the time of observation before adjusting, to be smoothier*/
-  int COLLECTION = 30;
+  int STABILIZATION = 500;       /* increase the time of observation before adjusting, to be smoothier*/
+  int COLLECTION = 50;
 
   /*
    * Constructor

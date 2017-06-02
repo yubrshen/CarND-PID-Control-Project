@@ -21,21 +21,34 @@ Twiddler::Twiddler(double p_coeff, double d_coeef, double i_coeff) {
   best_params = params; // assume to be deepcopy in C++
 
   // so far the working adjustment ranges: [0.1, 0.1, 0.1]
-  delta_params.push_back(0.5);
-  delta_params.push_back(0.5);
-  delta_params.push_back(0.5);
+  delta_params.push_back(3.0);
+  delta_params.push_back(3.0);
+  delta_params.push_back(3.0);
   }
 
 Twiddler::~Twiddler() {}
 
 bool Twiddler::process(double cte) {
   if (settled) return false;    // adjustment_needed = false bypass the twiddle process
-  if (counter_event < STABILIZATION)
-    ; // just keep running
-  else {
-    error += cte * cte;        // start to collect the error
+  bool adjustment_needed = false;
+  if (counter_event < STABILIZATION) {
+    adjustment_needed = (4.5 < abs(cte)); // just keep running unless it's too much error
+    if (adjustment_needed) {
+      error = 99999.0; // the error is inadmissible
+    }
   }
-  bool adjustment_needed = (counter_event == (COLLECTION + STABILIZATION));
+  else {
+    int collected = counter_event - STABILIZATION;
+    if (-1 == collected) {      // start to collect the error, and normalize per session
+      error += cte * cte;
+    } else {
+      error = ((error * collected) + cte * cte)/float(collected + 1);
+      //std::cout << "error: " << error << std::endl;
+    }
+    adjustment_needed = ((-1 < best_error) && (best_error < error));
+  }
+
+  adjustment_needed = (adjustment_needed || (counter_event == (COLLECTION + STABILIZATION)));
   if (adjustment_needed) {
     double s = sum(delta_params);
     settled = (s < adjustment_allowance); /* need to implementation sum of vector elements */
@@ -57,13 +70,15 @@ bool Twiddler::process(double cte) {
 
 void Twiddler::reset() {
   counter_event = -1; // so that the next meaningful count starts with 0
+  // std::cout << "reset error to 0" << std::endl;
   error = 0;
 }
 
 void Twiddler::evaluate_and_adjust() {
-  if ((best_error == -1) || (error < best_error)) { // improved
-    if (best_error == -1) {
-      std::cout << "initial set to best_error: " << best_error << error << std::endl;
+  // std::cout << "in evaluate_and_adjust: error: " << error << std::endl;
+  if ((best_error == -1.0) || (error < best_error)) { // improved
+    if (best_error == -1.0) {
+      std::cout << "initial set to best_error: " << best_error << " to " << error << std::endl;
       best_error = error;     // this staement cannot be factored out,
       // as best_error cannot be changed before test against its current value
       start_adjust_next_parameter(-1);
@@ -89,8 +104,13 @@ void Twiddler::evaluate_and_adjust() {
     // print_something(params);
     // std::cout << std::endl;
     if (previous_adjustment == 1) { // the previous adjustment is increase, then there is decrease to try
-      params[next_param] += -delta_params[next_param];
-      if (next_param == 2) std::cout << "decrease next_param: " << next_param << std::endl;
+      // params[next_param] += -delta_params[next_param];
+      if (params[next_param] == 0.0) {
+        params[next_param] += -delta_params[next_param];
+      } else {
+        params[next_param] *= (1 - delta_params[next_param]);
+      }
+      //if (next_param == 2) std::cout << "decrease next_param: " << next_param << std::endl;
       previous_adjustment = -1;
     } else { // previous_adjustment == -1, already exhausted the adjustment for the parameter
       delta_params[next_param] *= 0.9;
@@ -101,7 +121,13 @@ void Twiddler::evaluate_and_adjust() {
 
 void Twiddler::start_adjust_next_parameter(int current) {
     next_param = (current +1) % params.size();
-    params[next_param] += delta_params[next_param];
-    if (next_param == 2) std::cout << "increase next_param: " << next_param << std::endl;
+    // params[next_param] += delta_params[next_param];
+    if (params[next_param] == 0.0) {
+      params[next_param] += delta_params[next_param];
+    } else {
+      params[next_param] *= (1 + delta_params[next_param]);
+    }
+
+    //if (next_param == 2) std::cout << "increase next_param: " << next_param << std::endl;
     previous_adjustment = 1;
   }

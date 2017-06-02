@@ -36,11 +36,25 @@ std::string hasData(std::string s) {
 
 int main()
 {
+  std::string input = "";
+  bool to_run_twiddle = false;
+
+  std::cout << "Would you run the twiddle process? The program can run without it with pre-selected parameters.\nThe twiddle process will take hours to converge. If you want to run, please enter \'Y\'.\n";
+  getline(std::cin, input);
+  if (input == "Y") {
+    to_run_twiddle = true;
+    std::cout << "Twiddle process will start soon.\n";
+      } else {
+    std::cout << "No twiddle process to run.\n";
+  }
+
   uWS::Hub h;
 
   PID pid;
   //Twiddler twiddler(0.2, 3.0, 0.004); also OK, not as 0.1, 3.0, 0.004
-  Twiddler twiddler(0.1, 3.0, 0.004); // good parameters, so far the best of manual picking.
+  //Twiddler twiddler(0.1, 3.0, 0.004); // good parameters, so far the best of manual picking, without speed conditioning.
+  Twiddler twiddler(0.1, 3.34337, 0.004); // optimized by Twiddler from (0.1, 3.0, 0.004)
+  //Twiddler twiddler(0.16, 4.35, 0.255264);
   // Here is the best found by Twiddler: 0.19905 3.69262 0.004 starting from (0.1, 3.0, 0.004)
   // another good set 0.105 3.5 0.004 at faster speed.
   // another good one 0.19905 3.76306 0.004
@@ -51,7 +65,7 @@ int main()
   // TODO: Initialize the pid variable.
   pid.Init(twiddler.params[0], twiddler.params[1], twiddler.params[2]);
 
-  h.onMessage([&pid, &twiddler, &current_time, &previous_time]
+  h.onMessage([&pid, &twiddler, &current_time, &previous_time, &to_run_twiddle]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -80,31 +94,43 @@ int main()
           previous_time = current_time;
 
           pid.UpdateError(cte, dt);
-          steer_value = trimWithin(-pid.TotalError(), -1, 1);
+          double pid_steer = trimWithin(-pid.TotalError(), -1, 1);
+          steer_value = pid_steer;
+          // if (0.0001 < speed) {
+          //   steer_value = 5*pid_steer/speed; // adjust the steer conditional to the current speed
+          // } else {
+          //   steer_value = pid_steer;
+          // }
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          double throttle = 10.0;
-          double throttle_steer = 5/(abs(steer_value)*(7 - speed));
 
-          if (abs(steer_value*(7 - speed)) < 0.0001)
-            throttle = std::min(throttle, throttle_steer); // slow down with steep steering, and too fast speed
+          double throttle = 0.45;
+          double throttle_steer = throttle;
+          double f = abs(steer_value)*(10 - speed);
+          // if (0.0001 < f)
+          //   throttle_steer = 7/(10*f);
+          throttle = throttle - abs(steer_value)*speed/20;
+
+          // throttle = std::min(throttle, throttle_steer); // slow down with steep steering, and too fast speed
           // std::cout << "throttle: " << throttle << " throttle_steer: " << throttle_steer << " steer_value: " << steer_value << " speed: " << speed << std::endl;
-          msgJson["throttle"] = 0.4; // was 0.3
+          msgJson["throttle"] = throttle; // was 0.3
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           // DEBUG
-          //std::cout << "CTE: " << cte << " angle: " << angle << " Steering Value: " << steer_value << std::endl;
+          // std::cout << "CTE: " << cte << " angle: " << angle << " Steering Value: " << steer_value << std::endl;
           // std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-          bool adjustment_needed = twiddler.process(cte);
-          if (adjustment_needed) {
-            pid.Init(twiddler.params[0], twiddler.params[1], twiddler.params[2]);
-            std::cout << "cte: " << cte << std::endl;
-            if (2 < abs(cte)) {      // reset at the excessive cte
-              // send out the reset msg
-              std::string msg = "42[\"reset\",{}]";
-              std::cout << msg << std::endl;
-              ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+          if (to_run_twiddle) {
+            bool adjustment_needed = twiddler.process(cte);
+            if (adjustment_needed) {
+              pid.Init(twiddler.params[0], twiddler.params[1], twiddler.params[2]);
+              std::cout << "cte: " << cte << std::endl;
+              if (2 < abs(cte)) {      // reset at the excessive cte
+                // send out the reset msg
+                std::string msg = "42[\"reset\",{}]";
+                std::cout << msg << std::endl;
+                ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+              }
             }
           }
         }
