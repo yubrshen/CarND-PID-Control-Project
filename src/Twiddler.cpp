@@ -1,5 +1,6 @@
 #include "Twiddler.h"
 #include <iostream>
+#include <math.h>
 
 double sum(std::vector<double> v) {
   double s = 0;
@@ -21,9 +22,9 @@ Twiddler::Twiddler(double p_coeff, double d_coeef, double i_coeff) {
   best_params = params; // assume to be deepcopy in C++
 
   // so far the working adjustment ranges: [0.1, 0.1, 0.1]
-  delta_params.push_back(3.0);
-  delta_params.push_back(3.0);
-  delta_params.push_back(3.0);
+  delta_params.push_back(0.1);
+  delta_params.push_back(0.1);
+  delta_params.push_back(0.1);
   }
 
 Twiddler::~Twiddler() {}
@@ -31,24 +32,25 @@ Twiddler::~Twiddler() {}
 bool Twiddler::process(double cte) {
   if (settled) return false;    // adjustment_needed = false bypass the twiddle process
   bool adjustment_needed = false;
-  if (counter_event < STABILIZATION) {
-    adjustment_needed = (4.5 < abs(cte)); // just keep running unless it's too much error
-    if (adjustment_needed) {
-      error = 99999.0; // the error is inadmissible
+  if (4.5 < fabs(cte)) {
+    error = 999999.0; // the error is inadmissible
+    adjustment_needed = true; // early terminate the process
+  } else {
+    if (counter_event < STABILIZATION) {
+      ;
     }
-  }
-  else {
-    int collected = counter_event - STABILIZATION;
-    if (-1 == collected) {      // start to collect the error, and normalize per session
-      error += cte * cte;
-    } else {
-      error = ((error * collected) + cte * cte)/float(collected + 1);
-      //std::cout << "error: " << error << std::endl;
+    else {
+      int collected = counter_event - STABILIZATION;
+      if (-1 == collected) {      // start to collect the error, and normalize per session
+        error += cte * cte;
+      } else {
+        error = ((error * collected) + cte * cte)/float(collected + 1);
+        //std::cout << "error: " << error << std::endl;
+      }
+      adjustment_needed = ((-1 < best_error) && ((best_error + 0.1) < error)); // hopelessly large, early terminate
     }
-    adjustment_needed = ((-1 < best_error) && (best_error < error));
+    adjustment_needed = (adjustment_needed || (counter_event == (COLLECTION + STABILIZATION)));
   }
-
-  adjustment_needed = (adjustment_needed || (counter_event == (COLLECTION + STABILIZATION)));
   if (adjustment_needed) {
     double s = sum(delta_params);
     settled = (s < adjustment_allowance); /* need to implementation sum of vector elements */
@@ -66,7 +68,7 @@ bool Twiddler::process(double cte) {
   }
   counter_event += 1;
   return adjustment_needed;
-  }
+}
 
 void Twiddler::reset() {
   counter_event = -1; // so that the next meaningful count starts with 0
@@ -110,6 +112,10 @@ void Twiddler::evaluate_and_adjust() {
       } else {
         params[next_param] *= (1 - delta_params[next_param]);
       }
+      std::cout << "Testing: ";
+      print_something(params);
+      std::cout << std::endl;
+
       //if (next_param == 2) std::cout << "decrease next_param: " << next_param << std::endl;
       previous_adjustment = -1;
     } else { // previous_adjustment == -1, already exhausted the adjustment for the parameter
@@ -127,7 +133,9 @@ void Twiddler::start_adjust_next_parameter(int current) {
     } else {
       params[next_param] *= (1 + delta_params[next_param]);
     }
-
+    std::cout << "Testing: ";
+    print_something(params);
+    std::cout << std::endl;
     //if (next_param == 2) std::cout << "increase next_param: " << next_param << std::endl;
     previous_adjustment = 1;
   }

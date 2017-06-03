@@ -16,6 +16,16 @@ double rad2deg(double x) { return x * 180 / pi(); }
 double trimWithin(double x, double lowerBound, double upperBond) {
   if (x <= lowerBound) return lowerBound;
   if (upperBond <= x) return upperBond;
+  return x;
+}
+
+double trimWithinPi(double x) {
+  double twoPi = 2*pi();
+  //std::cout << "-7 % twoPi: " << fmod(-7.0, twoPi) << " 7 % twoPi: " << fmod(7, twoPi)  << std::endl;
+  double r = fmod(x, twoPi);
+  if (r < -pi()) r = r + twoPi;
+  if (pi() < r) r = r - twoPi;
+  return r/pi();
 }
 
 // Checks if the SocketIO event has JSON data.
@@ -52,13 +62,15 @@ int main()
 
   PID pid;
   //Twiddler twiddler(0.2, 3.0, 0.004); also OK, not as 0.1, 3.0, 0.004
+  // Twiddler twiddler(0.1, 2.88377, 0.00686582); // the current value found
+  Twiddler twiddler(0.19905, 3.69262, 0.004); // the best found with const throttle 0.4 from 0.1, 3.0, 0.004
+  //Twiddler twiddler(0.0926777, 4.887, 0.00721218);
+  //Twiddler twiddler(0.0983197, 5.43, 0.00721218);
+  //Twiddler twiddler(0.0311019, 5.34873, 0.0188496);
+  //Twiddler twiddler(0.0983197, 3, 0.008 );
   //Twiddler twiddler(0.1, 3.0, 0.004); // good parameters, so far the best of manual picking, without speed conditioning.
-  Twiddler twiddler(0.1, 3.34337, 0.004); // optimized by Twiddler from (0.1, 3.0, 0.004)
-  //Twiddler twiddler(0.16, 4.35, 0.255264);
-  // Here is the best found by Twiddler: 0.19905 3.69262 0.004 starting from (0.1, 3.0, 0.004)
-  // another good set 0.105 3.5 0.004 at faster speed.
-  // another good one 0.19905 3.76306 0.004
   //Twiddler twiddler(0.1, 0.25, 0.03); // good parameters
+
   double current_time = 0.0;
   double previous_time = clock();
 
@@ -94,25 +106,16 @@ int main()
           previous_time = current_time;
 
           pid.UpdateError(cte, dt);
-          double pid_steer = trimWithin(-pid.TotalError(), -1, 1);
-          steer_value = pid_steer;
-          // if (0.0001 < speed) {
-          //   steer_value = 5*pid_steer/speed; // adjust the steer conditional to the current speed
-          // } else {
-          //   steer_value = pid_steer;
-          // }
+          steer_value = trimWithinPi(-pid.TotalError());
+          double previous_angle_in_rad = deg2rad(angle);
+          double adjusted_steer = 0.0*previous_angle_in_rad + 1.0*steer_value; // make it smoothier
+          //std::cout << "previous steer angle: " << previous_angle_in_rad << " new PID adjusted: " << steer_value << std::endl;
           json msgJson;
-          msgJson["steering_angle"] = steer_value;
+          msgJson["steering_angle"] = adjusted_steer;
 
-          double throttle = 0.45;
-          double throttle_steer = throttle;
-          double f = abs(steer_value)*(10 - speed);
-          // if (0.0001 < f)
-          //   throttle_steer = 7/(10*f);
-          throttle = throttle - abs(steer_value)*speed/20;
-
-          // throttle = std::min(throttle, throttle_steer); // slow down with steep steering, and too fast speed
-          // std::cout << "throttle: " << throttle << " throttle_steer: " << throttle_steer << " steer_value: " << steer_value << " speed: " << speed << std::endl;
+          double throttle = 0.4;
+          // 1.9 - exp(0.07*fabs(steer_value)*speed*fabs(cte));
+          //std::cout << "throttle: " << throttle << " steer_value: " << steer_value << " speed: " << speed << " cte: " << cte << std::endl;
           msgJson["throttle"] = throttle; // was 0.3
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
@@ -125,7 +128,7 @@ int main()
             if (adjustment_needed) {
               pid.Init(twiddler.params[0], twiddler.params[1], twiddler.params[2]);
               std::cout << "cte: " << cte << std::endl;
-              if (2 < abs(cte)) {      // reset at the excessive cte
+              if (2.0 < fabs(cte)) {      // reset at the excessive cte
                 // send out the reset msg
                 std::string msg = "42[\"reset\",{}]";
                 std::cout << msg << std::endl;

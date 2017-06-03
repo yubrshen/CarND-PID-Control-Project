@@ -14,10 +14,10 @@ class Twiddler {
   std::vector<double> best_params; // = deepcopy(self.params);
   std::vector<double> delta_params; // = [0.1, 0.1, 0.1];
 
-  double adjustment_allowance = 0.007;
+  double adjustment_allowance = 0.01;
   int next_param = -1;
   int previous_adjustment = 1;
-  int STABILIZATION = 500;       /* increase the time of observation before adjusting, to be smoothier*/
+  int STABILIZATION = 300;       /* increase the time of observation before adjusting, to be smoothier*/
   int COLLECTION = 50;
 
   /*
