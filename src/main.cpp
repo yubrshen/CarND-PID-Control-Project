@@ -62,8 +62,11 @@ int main()
 
   PID pid;
   //Twiddler twiddler(0.2, 3.0, 0.004); also OK, not as 0.1, 3.0, 0.004
-  // Twiddler twiddler(0.1, 2.88377, 0.00686582); // the current value found
-  Twiddler twiddler(0.19905, 3.69262, 0.004); // the best found with const throttle 0.4 from 0.1, 3.0, 0.004
+  Twiddler twiddler(0.207354, 8.6462, 0.004); // the one found on the run on June 3rd night, can survive full track with above 50 up to 60 mph, with a few traffic violation.
+  // Twiddler twiddler(0.19905, 3.69262, 0.004); // the best found with const throttle 0.4 from 0.1, 3.0, 0.004
+  // Twiddler twiddler(0.217006, 4.00758, 0.00256467);
+  //Twiddler twiddler(0.217006, 3.69262, 0.00373756); // found by Twiddler with adaptive throttle, and average steering
+
   //Twiddler twiddler(0.0926777, 4.887, 0.00721218);
   //Twiddler twiddler(0.0983197, 5.43, 0.00721218);
   //Twiddler twiddler(0.0311019, 5.34873, 0.0188496);
@@ -111,11 +114,10 @@ int main()
           double adjusted_steer = 0.0*previous_angle_in_rad + 1.0*steer_value; // make it smoothier
           //std::cout << "previous steer angle: " << previous_angle_in_rad << " new PID adjusted: " << steer_value << std::endl;
           json msgJson;
-          msgJson["steering_angle"] = adjusted_steer;
-
-          double throttle = 0.4;
-          // 1.9 - exp(0.07*fabs(steer_value)*speed*fabs(cte));
-          //std::cout << "throttle: " << throttle << " steer_value: " << steer_value << " speed: " << speed << " cte: " << cte << std::endl;
+          msgJson["steering_angle"] = adjusted_steer; // steer_value;
+          double MAX_THROTTLE = 0.7;
+          double throttle = MAX_THROTTLE - 0.02*sqrt(fabs(angle)*speed*fabs(cte)); // deacceleration parameter may not be too large than 0.03 or it may cause more disstablization.
+          //std::cout << "throttle: " << throttle << " angle: " << angle << " speed: " << speed << " cte: " << cte << std::endl;
           msgJson["throttle"] = throttle; // was 0.3
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";

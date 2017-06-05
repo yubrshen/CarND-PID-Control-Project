@@ -22,9 +22,9 @@ Twiddler::Twiddler(double p_coeff, double d_coeef, double i_coeff) {
   best_params = params; // assume to be deepcopy in C++
 
   // so far the working adjustment ranges: [0.1, 0.1, 0.1]
-  delta_params.push_back(0.1);
-  delta_params.push_back(0.1);
-  delta_params.push_back(0.1);
+  delta_params.push_back(1.5);
+  delta_params.push_back(1.5);
+  delta_params.push_back(1.5);
   }
 
 Twiddler::~Twiddler() {}
@@ -32,7 +32,8 @@ Twiddler::~Twiddler() {}
 bool Twiddler::process(double cte) {
   if (settled) return false;    // adjustment_needed = false bypass the twiddle process
   bool adjustment_needed = false;
-  if (4.5 < fabs(cte)) {
+  double worst_error_permitted = 3.85;
+  if (worst_error_permitted < fabs(cte)) {
     error = 999999.0; // the error is inadmissible
     adjustment_needed = true; // early terminate the process
   } else {

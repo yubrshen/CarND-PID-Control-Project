@@ -17,8 +17,8 @@ class Twiddler {
   double adjustment_allowance = 0.01;
   int next_param = -1;
   int previous_adjustment = 1;
-  int STABILIZATION = 300;       /* increase the time of observation before adjusting, to be smoothier*/
-  int COLLECTION = 50;
+  int STABILIZATION = 1000;       /* increase the time of observation before adjusting, to be smoothier*/
+  int COLLECTION = 100;
 
   /*
    * Constructor
