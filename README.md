@@ -4,7 +4,9 @@ Self-Driving Car Engineer Nanodegree Program
 ---
 ## Achievement
 
-A PID controller is implemented. A message-driven twiddle procedure for PID parameters is also implemented. 
+A PID controller is implemented. A message-driven twiddle procedure for PID parameters is implemented. 
+I also did a  [prototype of message-driven twiddle process in Python](./src/twiddler.py) first for proof of concept.
+It may serve as a reference for implementation in C++. 
 
 The PID controller with manually selected parameters such as {0.2, 3.0, 0.004} for P, D, I respectively with constant throttle 0.4 can achieve
 stable driving the full track with top speed of 45 mph. 
