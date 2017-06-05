@@ -2,6 +2,51 @@
 Self-Driving Car Engineer Nanodegree Program
 
 ---
+## Achievement
+
+A PID controller is implemented. A message-driven twiddle procedure for PID parameters is also implemented. 
+
+The PID controller with manually selected parameters such as {0.2, 3.0, 0.004} for P, D, I respectively with constant throttle 0.4 can achieve
+stable driving the full track with top speed of 45 mph. 
+
+With adaptive throttle rule of $0.7 - \sqrt{fabs(angle)\cdot speed\cdot fabs(cte)}$, through twiddle process a set of paramters were found 
+that can enable mostly safe driving with top speed of 70 mph, and most of the time the speed is above 40 mph. There are two incidents where 
+that the car drove over to the lanes markings usually forbidden.
+
+Painstaking effort were made to search for parameters for safer driving. But I was only able to minimize the number of incidents of traffic violations. 
+
+In the future, I might try to use another PID to control the throttle. 
+
+I did attempted on the effort, so far with my current 
+found formula for ideal speed: $MAX_SPEED \cot (1 - \frac {\sqrt{angle}} {5})$ where $ 5 = \sqrt{25}$ and 25 is considered to be the maximum angle, 
+I feel the error signal being the difference between the idea speed given steering angle and the current speed may not capture the 
+requirement that the speed at the extreme angle 25 should be very small regardless to the current speed. But I had not found good expression for the ideal speed thus I have not further attempted. 
+
+Here is a capture of the running at high speed after twiddle process:
+
+![](./after-tuning-full-track-20170605.gif)
+
+The following shows the typical twiddle process. 
+
+![](./typical-tuning--session-20170602.gif)
+
+The follow shows only P component in the controller:
+
+![](./p-alonei-20170605.gif)
+
+It will only work when there is not much change in the speed of cte change. 
+
+The follow shows only the D component in the controller:
+
+![](./d-alone-20170605.gif)
+
+It performs even worse, as it does not account for the presence of cte directly, only will account of the change of cte. 
+
+This shows only the I component in the controller:
+
+![](./i-alone-20160605.gif)
+
+It performs the worst, as it only response to the accumulation of cte. 
 
 ## Dependencies
 
@@ -27,58 +72,3 @@ Self-Driving Car Engineer Nanodegree Program
 3. Compile: `cmake .. && make`
 4. Run it: `./pid`. 
 
-## Editor Settings
-
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
-
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
-
-## Code Style
-
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
-
-## Project Instructions and Rubric
-
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
-
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/e8235395-22dd-4b87-88e0-d108c5e5bbf4/concepts/6a4d8d42-6a04-4aa6-b284-1697c0fd6562)
-for instructions and the project rubric.
-
-## Hints!
-
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
-
-## Call for IDE Profiles Pull Requests
-
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./

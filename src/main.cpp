@@ -63,6 +63,9 @@ int main()
   PID pid;
   //Twiddler twiddler(0.2, 3.0, 0.004); also OK, not as 0.1, 3.0, 0.004
   Twiddler twiddler(0.207354, 8.6462, 0.004); // the one found on the run on June 3rd night, can survive full track with above 50 up to 60 mph, with a few traffic violation.
+  //Twiddler twiddler(0.207354, 0.0, 0.0);
+  //Twiddler twiddler(0.0, 8.6462, 0.0);
+  //Twiddler twiddler(0.0, 8.0, 0.004);
   // Twiddler twiddler(0.19905, 3.69262, 0.004); // the best found with const throttle 0.4 from 0.1, 3.0, 0.004
   // Twiddler twiddler(0.217006, 4.00758, 0.00256467);
   //Twiddler twiddler(0.217006, 3.69262, 0.00373756); // found by Twiddler with adaptive throttle, and average steering
